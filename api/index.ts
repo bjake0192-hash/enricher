@@ -7,6 +7,7 @@ import app from './app.js';
 export const config = {
   api: {
     bodyParser: false,
+    responseLimit: '8mb',
   },
 };
 
