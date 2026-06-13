@@ -19,6 +19,20 @@ interface LeadData {
   _error?: string;
 }
 
+const loadPdfJs = async () => {
+  if (!(window as any).pdfjsLib) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    await new Promise((resolve, reject) => {
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  return (window as any).pdfjsLib;
+};
+
 export default function Home() {
   const [step, setStep] = useState<'upload' | 'map' | 'dashboard'>('upload');
   const [rawHeaders, setRawHeaders] = useState<string[]>([]);
@@ -88,23 +102,87 @@ export default function Home() {
     if (!file) return;
 
     setIsPdfUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
 
     try {
-      const response = await axios.post('/api/pdf/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const pdfjsLib = await loadPdfJs();
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        for (const item of textContent.items) {
+          fullText += item.str;
+          if (item.hasEOL) {
+            fullText += '\n';
+          }
+        }
+      }
 
-      if (response.data.success && response.data.data.length > 0) {
-        const extracted = response.data.data.map((item: any) => ({
-          ...item,
-          _status: 'pending'
-        }));
+      // Process the extracted text using the exact same logic
+      const lines = fullText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
+      const extractedData = [];
+      const phoneRegex = /(\(?0\d{3,4}\)?\s*\d{3,6})\s*$/;
+      
+      let currentCompany = '';
+      let currentSubHeading = '';
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const match = line.match(phoneRegex);
         
-        setRawData(extracted);
-        // Map directly since the backend already matched the fields perfectly
-        setData(extracted);
+        if (!match) {
+          let isCompany = false;
+          if (line.trim().endsWith(',')) {
+            isCompany = true;
+          } else if (!currentCompany) {
+            isCompany = true;
+          }
+          
+          if (isCompany) {
+            currentCompany = line.replace(/,\s*$/, '').trim();
+            currentSubHeading = '';
+          } else {
+            currentSubHeading = line.trim();
+          }
+        } else {
+          const contactNumber = match[1].trim();
+          let address = '';
+          
+          if (line.includes('..')) {
+            address = line.split(/\.{2,}/)[0].trim();
+          } else {
+            address = line.replace(phoneRegex, '').trim();
+          }
+          
+          if (address === '' && currentSubHeading) {
+            address = currentSubHeading;
+          }
+          
+          if (currentCompany) {
+            extractedData.push({
+              companyName: currentCompany,
+              address: address,
+              contactNumber,
+              email: '',
+              _status: 'pending' as const
+            });
+          } else if (address) {
+            extractedData.push({
+              companyName: address,
+              address: '',
+              contactNumber,
+              email: '',
+              _status: 'pending' as const
+            });
+          }
+        }
+      }
+
+      if (extractedData.length > 0) {
+        setRawData(extractedData);
+        setData(extractedData);
         setProgress(0);
         setStep('dashboard');
       } else {
@@ -112,7 +190,7 @@ export default function Home() {
       }
     } catch (err: any) {
       console.error(err);
-      alert("Failed to parse PDF. " + (err.response?.data?.error || err.message));
+      alert("Failed to parse PDF. " + err.message);
     } finally {
       setIsPdfUploading(false);
       if (pdfInputRef.current) pdfInputRef.current.value = '';
