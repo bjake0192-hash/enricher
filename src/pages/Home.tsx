@@ -244,10 +244,10 @@ export default function Home() {
         });
 
         if (response.data.success && response.data.data) {
-          const enrichData = response.data.data;
-          updatedData[i].fetched_address = enrichData.fetchedAddress;
-          updatedData[i].director1_name = enrichData.director1.name;
-          updatedData[i].director1_mobile = enrichData.director1.mobile;
+            const enrichData = response.data.data;
+            updatedData[i].fetched_address = enrichData.fetchedAddress;
+            updatedData[i].director1_name = enrichData.director1.name;
+            updatedData[i].director1_mobile = enrichData.director1.mobile;
           updatedData[i].director2_name = enrichData.director2.name;
           updatedData[i].director2_mobile = enrichData.director2.mobile;
           updatedData[i].director3_name = enrichData.director3.name;
@@ -270,13 +270,36 @@ export default function Home() {
   };
 
   const downloadCsv = () => {
-    // Remove internal status fields
-    const exportData = data.map(({ 
-      _status, _error, 
-      ...rest 
-    }) => rest);
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const headers = [
+      'Company Name', 
+      'Original Address',
+      'Registered Address', 
+      'Main Phone', 
+      'Director 1', 
+      'Mobile 1', 
+      'Director 2', 
+      'Mobile 2', 
+      'Director 3', 
+      'Mobile 3'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => [
+        `"${(row.companyName || '').replace(/"/g, '""')}"`,
+        `"${(row.address || '').replace(/"/g, '""')}"`,
+        `"${(row.fetched_address || '').replace(/"/g, '""')}"`,
+        `"${(row.contactNumber || '').replace(/"/g, '""')}"`,
+        `"${(row.director1_name || '').replace(/"/g, '""')}"`,
+        `"${(row.director1_mobile || '').replace(/"/g, '""')}"`,
+        `"${(row.director2_name || '').replace(/"/g, '""')}"`,
+        `"${(row.director2_mobile || '').replace(/"/g, '""')}"`,
+        `"${(row.director3_name || '').replace(/"/g, '""')}"`,
+        `"${(row.director3_mobile || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -550,6 +573,7 @@ export default function Home() {
                     <tr>
                       <th className="px-6 py-4 font-medium">Status</th>
                       <th className="px-6 py-4 font-medium min-w-[200px]">Company Name</th>
+                      <th className="px-6 py-4 font-medium min-w-[200px]">Original Address</th>
                       <th className="px-6 py-4 font-medium min-w-[200px]">Registered Address</th>
                       <th className="px-6 py-4 font-medium min-w-[150px]">Main Phone</th>
                       <th className="px-6 py-4 font-medium min-w-[150px]">Director 1</th>
@@ -577,7 +601,8 @@ export default function Home() {
                           )}
                         </td>
                         <td className="px-6 py-4 font-medium text-slate-900">{row.companyName}</td>
-                        <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={row.fetched_address}>{row.fetched_address || row.address || '-'}</td>
+                        <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={row.address}>{row.address || '-'}</td>
+                        <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={row.fetched_address}>{row.fetched_address || '-'}</td>
                         <td className="px-6 py-4 text-slate-600">{row.contactNumber || '-'}</td>
                         <td className="px-6 py-4 text-slate-600">{row.director1_name || '-'}</td>
                         <td className="px-6 py-4 text-slate-600">{row.director1_mobile || '-'}</td>
