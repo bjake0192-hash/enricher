@@ -220,7 +220,9 @@ export default function Home() {
         {/* Header */}
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Lead Enricher</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900">
+              Openlead<span className="text-[#3cdbc0]">.</span>
+            </h1>
             <p className="text-slate-500 mt-1">Upload your B2B leads to fetch directors and mobile numbers automatically.</p>
           </div>
         </header>
@@ -228,19 +230,19 @@ export default function Home() {
         {/* Quick Search */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-4">
-            <Search className="w-5 h-5 text-blue-600" />
+            <Search className="w-5 h-5 text-[#3cdbc0]" />
             <h2 className="text-lg font-bold text-slate-900">Quick Web Search</h2>
           </div>
           <form onSubmit={handleSingleSearch} className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-slate-700 mb-1">Person Name</label>
-              <input type="text" value={searchName} onChange={e => setSearchName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none" placeholder="e.g. John Doe" required />
+              <input type="text" value={searchName} onChange={e => setSearchName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-[#3cdbc0] focus:border-[#3cdbc0] block p-2.5 outline-none" placeholder="e.g. John Doe" required />
             </div>
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-slate-700 mb-1">Company Name</label>
-              <input type="text" value={searchCompany} onChange={e => setSearchCompany(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none" placeholder="e.g. Acme Corp" required />
+              <input type="text" value={searchCompany} onChange={e => setSearchCompany(e.target.value)} className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-[#3cdbc0] focus:border-[#3cdbc0] block p-2.5 outline-none" placeholder="e.g. Acme Corp" required />
             </div>
-            <button type="submit" disabled={searchResult.loading || !searchName || !searchCompany} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors h-[42px] flex items-center gap-2">
+            <button type="submit" disabled={searchResult.loading || !searchName || !searchCompany} className="bg-slate-900 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors h-[42px] flex items-center gap-2">
               {searchResult.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Search Web
             </button>
@@ -264,7 +266,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors h-64"
+              className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-[#3cdbc0] hover:bg-[#3cdbc0]/5 transition-colors h-64"
             >
               <input 
                 type="file" 
@@ -273,8 +275,8 @@ export default function Home() {
                 ref={fileInputRef} 
                 onChange={handleFileUpload} 
               />
-              <div className="bg-blue-100 p-4 rounded-full mb-4">
-                <UploadCloud className="w-8 h-8 text-blue-600" />
+              <div className="bg-[#3cdbc0]/10 p-4 rounded-full mb-4">
+                <UploadCloud className="w-8 h-8 text-[#3cdbc0]" />
               </div>
               <h3 className="text-lg font-semibold mb-1">Upload CSV File</h3>
               <p className="text-sm text-slate-500 text-center max-w-sm mt-2">
@@ -378,7 +380,7 @@ export default function Home() {
                 <button 
                   onClick={confirmMapping}
                   disabled={!mapping.companyName}
-                  className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="bg-slate-900 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Confirm & Continue
                 </button>
@@ -434,7 +436,7 @@ export default function Home() {
                 <button 
                   onClick={processLeads}
                   disabled={isProcessing || pendingCount === 0}
-                  className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                  className="bg-slate-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                 >
                   {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {isProcessing ? `Processing (${progress}%)` : 'Start Enrichment'}
@@ -459,7 +461,7 @@ export default function Home() {
 
             {isProcessing && (
               <div className="w-full bg-slate-200 rounded-full h-2.5">
-                <div className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                <div className="bg-[#3cdbc0] h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
               </div>
             )}
 
@@ -485,7 +487,7 @@ export default function Home() {
                       <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
                           {row._status === 'pending' && <span className="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">Pending</span>}
-                          {row._status === 'processing' && <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium"><Loader2 className="w-3 h-3 animate-spin" /> Processing</span>}
+                          {row._status === 'processing' && <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#3cdbc0]/10 text-slate-700 text-xs font-medium"><Loader2 className="w-3 h-3 animate-spin text-[#3cdbc0]" /> Processing</span>}
                           {row._status === 'success' && <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-green-700 text-xs font-medium">Enriched</span>}
                           {row._status === 'failed' && (
                             <div className="group relative inline-flex items-center">
