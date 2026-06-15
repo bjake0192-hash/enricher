@@ -31,7 +31,7 @@ function parseOfficerName(fullName: string) {
 
 router.post('/', async (req: Request<{}, {}, EnrichRequest>, res: Response): Promise<void> => {
   try {
-    const { companyName, email } = req.body;
+    const { companyName, email, address } = req.body;
     
     if (!companyName) {
       res.status(400).json({ success: false, error: 'companyName is required' });
@@ -58,9 +58,9 @@ router.post('/', async (req: Request<{}, {}, EnrichRequest>, res: Response): Pro
 
     const chAuthHeader = `Basic ${Buffer.from(chApiKey + ':').toString('base64')}`;
 
-    // 1. Search for company
+    // 1. Search for company (fetch top 10 to find the best match)
     const searchRes = await axios.get(`${COMPANIES_HOUSE_API_URL}/search/companies`, {
-      params: { q: companyName, items_per_page: 1 },
+      params: { q: companyName, items_per_page: 10 },
       headers: { Authorization: chAuthHeader }
     });
 
@@ -78,9 +78,49 @@ router.post('/', async (req: Request<{}, {}, EnrichRequest>, res: Response): Pro
       return;
     }
 
-    const companyNumber = items[0].company_number;
-    const matchedCompanyName = items[0].title;
-    const companyAddress = items[0].address_snippet || '';
+    // Scoring algorithm to find the most accurate company match
+    let bestMatch = items[0];
+    let bestScore = -1;
+
+    const cleanInputName = companyName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const inputAddressTokens = address ? address.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 2) : [];
+
+    for (const item of items) {
+      let score = 0;
+      
+      const cleanItemName = item.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+      
+      // Exact name match
+      if (cleanItemName === cleanInputName) {
+        score += 50;
+      } else if (cleanItemName.includes(cleanInputName) || cleanInputName.includes(cleanItemName)) {
+        score += 20;
+      }
+
+      // Active status preference (we prefer active companies)
+      if (item.company_status === 'active') {
+        score += 30;
+      }
+
+      // Address matching (if provided from CSV/PDF)
+      if (inputAddressTokens.length > 0 && item.address_snippet) {
+        const itemAddress = item.address_snippet.toLowerCase();
+        for (const token of inputAddressTokens) {
+          if (itemAddress.includes(token)) {
+            score += 15;
+          }
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = item;
+      }
+    }
+
+    const companyNumber = bestMatch.company_number;
+    const matchedCompanyName = bestMatch.title;
+    const companyAddress = bestMatch.address_snippet || '';
 
     // 2. Get officers
     const officersRes = await axios.get(`${COMPANIES_HOUSE_API_URL}/company/${companyNumber}/officers`, {
