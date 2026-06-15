@@ -39,12 +39,14 @@ export default function Home() {
   const [rawData, setRawData] = useState<any[]>([]);
   const [mapping, setMapping] = useState({ companyName: '', address: '', contactNumber: '', email: '' });
 
+  const [dataType, setDataType] = useState<'b2b' | 'residential'>('b2b');
   const [data, setData] = useState<LeadData[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPdfUploading, setIsPdfUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const residentialCsvInputRef = useRef<HTMLInputElement>(null);
 
   const [searchName, setSearchName] = useState('');
   const [searchCompany, setSearchCompany] = useState('');
@@ -65,6 +67,60 @@ export default function Home() {
     } catch (err: any) {
       setSearchResult({ error: err.response?.data?.error || err.message, loading: false, searched: true });
     }
+  };
+
+  const handleResidentialCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows = results.data as string[][];
+        const formattedData: LeadData[] = [];
+
+        let startIndex = 0;
+        if (rows.length > 0 && rows[0][0] && rows[0][0].toLowerCase().includes('name')) {
+          startIndex = 1;
+        }
+
+        for (let i = startIndex; i < rows.length; i++) {
+          const row = rows[i];
+          const col1 = row[0] || '';
+          const col2 = row[1] || '';
+
+          const parts = col1.split(',');
+          let name = col1;
+          let address = '';
+
+          if (parts.length >= 3) {
+            const lastName = parts[0].trim();
+            const firstName = parts[1].trim();
+            name = `${firstName} ${lastName}`;
+            address = parts.slice(2).join(',').trim();
+          } else if (parts.length === 2) {
+            const lastName = parts[0].trim();
+            const firstName = parts[1].trim();
+            name = `${firstName} ${lastName}`;
+          }
+
+          formattedData.push({
+            companyName: name, // Using companyName to store First & Last Name
+            address: address,
+            contactNumber: col2,
+            _status: 'success' // Pre-mark as success so it skips enrichment
+          });
+        }
+
+        setData(formattedData);
+        setDataType('residential');
+        setProgress(0);
+        setStep('dashboard');
+      }
+    });
+    
+    if (residentialCsvInputRef.current) residentialCsvInputRef.current.value = '';
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,6 +275,7 @@ export default function Home() {
     setRawHeaders([]);
     setRawData([]);
     setData([]);
+    setDataType('b2b');
     setProgress(0);
     setMapping({ companyName: '', address: '', contactNumber: '', email: '' });
   };
@@ -270,6 +327,29 @@ export default function Home() {
   };
 
   const downloadCsv = () => {
+    if (dataType === 'residential') {
+      const headers = ['First & Last Name', 'Address', 'Contact Number'];
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => [
+          `"${(row.companyName || '').replace(/"/g, '""')}"`,
+          `"${(row.address || '').replace(/"/g, '""')}"`,
+          `"${(row.contactNumber || '').replace(/"/g, '""')}"`
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'formatted_residential_data.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
     const headers = [
       'Company Name', 
       'Original Address',
@@ -364,7 +444,7 @@ export default function Home() {
 
         {/* Upload Zone */}
         {step === 'upload' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div 
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-[#3cdbc0] hover:bg-[#3cdbc0]/5 transition-colors h-64"
@@ -379,7 +459,7 @@ export default function Home() {
               <div className="bg-[#3cdbc0]/10 p-4 rounded-full mb-4">
                 <UploadCloud className="w-8 h-8 text-[#3cdbc0]" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Upload CSV File</h3>
+              <h3 className="text-lg font-semibold mb-1">Upload B2B CSV</h3>
               <p className="text-sm text-slate-500 text-center max-w-sm mt-2">
                 We'll help you map your columns in the next step.
               </p>
@@ -399,9 +479,29 @@ export default function Home() {
               <div className="bg-purple-100 p-4 rounded-full mb-4">
                 {isPdfUploading ? <Loader2 className="w-8 h-8 text-purple-600 animate-spin" /> : <FileText className="w-8 h-8 text-purple-600" />}
               </div>
-              <h3 className="text-lg font-semibold mb-1">Extract from PDF Directory</h3>
+              <h3 className="text-lg font-semibold mb-1">Extract PDF Directory</h3>
               <p className="text-sm text-slate-500 text-center max-w-sm mt-2">
-                {isPdfUploading ? 'Extracting listings...' : 'Upload a directory-style PDF to automatically extract names, addresses, and numbers.'}
+                {isPdfUploading ? 'Extracting listings...' : 'Upload a directory-style PDF to extract names and numbers.'}
+              </p>
+            </div>
+
+            <div 
+              onClick={() => residentialCsvInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 rounded-xl p-12 flex flex-col items-center justify-center bg-white cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors h-64"
+            >
+              <input 
+                type="file" 
+                accept=".csv" 
+                className="hidden" 
+                ref={residentialCsvInputRef} 
+                onChange={handleResidentialCsvUpload} 
+              />
+              <div className="bg-orange-100 p-4 rounded-full mb-4">
+                <UploadCloud className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-center">Format Residential CSV</h3>
+              <p className="text-sm text-slate-500 text-center max-w-sm mt-2">
+                Instantly formats "Lastname, First, Address" data.
               </p>
             </div>
           </div>
@@ -534,14 +634,16 @@ export default function Home() {
 
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex gap-3">
-                <button 
-                  onClick={processLeads}
-                  disabled={isProcessing || pendingCount === 0}
-                  className="bg-slate-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
-                >
-                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {isProcessing ? `Processing (${progress}%)` : 'Start Enrichment'}
-                </button>
+                {dataType === 'b2b' && (
+                  <button 
+                    onClick={processLeads}
+                    disabled={isProcessing || pendingCount === 0}
+                    className="bg-slate-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                  >
+                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {isProcessing ? `Processing (${progress}%)` : 'Start Enrichment'}
+                  </button>
+                )}
                 <button 
                   onClick={resetAll}
                   disabled={isProcessing}
